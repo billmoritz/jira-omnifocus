@@ -63,8 +63,9 @@ def get_issues
   if $opts[:usekeychain]
     keychainUri = URI($opts[:hostname])
     host = keychainUri.host
+    puts $opts[:hostname]
+    puts host
     if keychainitem = Keychain.internet_passwords.where(:server => host).first
-	    keychainitem = Keychain.internet_passwords.where(:server => 'www.sparkred.com').first
     	$opts[:username] = keychainitem.account
     	$opts[:password] = keychainitem.password
     else
@@ -125,10 +126,10 @@ def add_task(omnifocus_document, new_task_properties)
   tprops[:context] = ctx if new_task_properties['context']
 
   # You can uncomment this line and comment the one below if you want the tasks to end up in your Inbox instead of a specific Project
-#  new_task = omnifocus_document.make(:new => :inbox_task, :with_properties => tprops)
+  new_task = omnifocus_document.make(:new => :inbox_task, :with_properties => tprops)
 
   # Make a new Task in the Project
-  proj.make(:new => :task, :with_properties => tprops)
+  #proj.make(:new => :task, :with_properties => tprops)
 
   puts "Created task " + tprops[:name]
   return true

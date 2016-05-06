@@ -21,6 +21,3 @@ DEPENDENCIES
   rb-scpt
   ruby-keychain
   trollop
-
-BUNDLED WITH
-   1.11.2
