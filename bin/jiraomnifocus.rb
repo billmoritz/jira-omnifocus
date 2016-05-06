@@ -14,8 +14,15 @@ def log(msg)
   puts msg.to_s unless $opts[:quiet]
 end
 
-def notify(msg)
-  TerminalNotifier.notify msg.to_s if $opts[:notify]
+def notify(action, message)
+  if $opts[:notify]
+    TerminalNotifier.notify(
+      message.to_s,
+      title: 'Jira to OmniFocus',
+      subtitle: action,
+      sender: 'com.omnigroup.omnifocus2'
+    )
+  end
 end
 
 def get_opts
@@ -60,7 +67,7 @@ EOS
   opt :context,   'OF Default Context',   :type => :string,   :short => 'c', :required => false,   :default => config["omnifocus"]["context"]
   opt :project,   'OF Default Project',   :type => :string,   :short => 'r', :required => false,   :default => config["omnifocus"]["project"]
   opt :flag,      'Flag tasks in OF',     :type => :boolean,  :short => 'f', :required => false,   :default => config["omnifocus"]["flag"]
-  opt :quiet,     'Disable output',       :type => :boolean,   :short => 'q',                      :default => true
+  opt :quiet,     'Disable output',       :type => :boolean,   :short => 'q',                      :default => false
   opt :notify,    'Notify in OSX',        :type => :boolean,   :short => 'n',                      :default => true
 end
 end
@@ -140,9 +147,10 @@ def add_task(omnifocus_document, new_task_properties)
   # Make a new Task in the Project
   #proj.make(:new => :task, :with_properties => tprops)
 
-  message = "Created task " + tprops[:name]
-  log message
-  notify message
+  action = 'Created task'
+  message = tprops[:name]
+  log "#{action} #{message}"
+  notify(action, message)
   return true
 end
 
@@ -200,7 +208,10 @@ def mark_resolved_jira_tickets_as_complete_in_omnifocus (omnifocus_document)
               # if resolved, mark it as complete in OmniFocus
               if task.completed.get != true
                 task.completed.set(true)
-                log "Marked task completed " + jira_id
+                action = 'Completed task'
+                message = jira_id
+                log "#{action} #{message}"
+                notify(action, message)
               end
             end
             # Check to see if the Jira ticket has been unassigned or assigned to someone else, if so delete it.
