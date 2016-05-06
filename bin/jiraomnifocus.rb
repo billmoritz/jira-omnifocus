@@ -8,6 +8,15 @@ require 'yaml'
 require 'net/http'
 require 'keychain'
 require 'pathname'
+require 'terminal-notifier'
+
+def log(msg)
+  puts msg.to_s unless $opts[:quiet]
+end
+
+def notify(msg)
+  TerminalNotifier.notify msg.to_s if $opts[:notify]
+end
 
 def get_opts
   if  File.file?(ENV['HOME']+'/.jofsync.yaml')
@@ -20,10 +29,11 @@ jira:
   keychain: false
   username: ''
   password: ''
-  filter:   'resolution = Unresolved and issue in watchedissues()'
+  filter: 'resolution = Unresolved and issue in watchedissues()'
+  notify: true
 omnifocus:
-  context:  'Office'
-  project:  'Jira'
+  context: 'Office'
+  project: 'Jira'
   flag: true
 EOS
   end
@@ -51,6 +61,7 @@ EOS
   opt :project,   'OF Default Project',   :type => :string,   :short => 'r', :required => false,   :default => config["omnifocus"]["project"]
   opt :flag,      'Flag tasks in OF',     :type => :boolean,  :short => 'f', :required => false,   :default => config["omnifocus"]["flag"]
   opt :quiet,     'Disable output',       :type => :boolean,   :short => 'q',                      :default => true
+  opt :notify,    'Notify in OSX',        :type => :boolean,   :short => 'n',                      :default => true
 end
 end
 
@@ -63,8 +74,6 @@ def get_issues
   if $opts[:usekeychain]
     keychainUri = URI($opts[:hostname])
     host = keychainUri.host
-    puts $opts[:hostname]
-    puts host
     if keychainitem = Keychain.internet_passwords.where(:server => host).first
     	$opts[:username] = keychainitem.account
     	$opts[:password] = keychainitem.password
@@ -79,7 +88,7 @@ def get_issues
     response = http.request request
     # If the response was good, then grab the data
     if response.code =~ /20[0-9]{1}/
-        puts "Connected successfully to " + uri.hostname
+        log "Connected successfully to " + uri.hostname
         data = JSON.parse(response.body)
         data["issues"].each do |item|
           jira_id = item["key"]
@@ -131,7 +140,9 @@ def add_task(omnifocus_document, new_task_properties)
   # Make a new Task in the Project
   #proj.make(:new => :task, :with_properties => tprops)
 
-  puts "Created task " + tprops[:name]
+  message = "Created task " + tprops[:name]
+  log message
+  notify message
   return true
 end
 
@@ -140,7 +151,7 @@ def add_jira_tickets_to_omnifocus (omnifocus_document)
   # Get the open Jira issues assigned to you
   results = get_issues
   if results.nil?
-    puts "No results from Jira"
+    log "No results from Jira"
     exit
   end
 
@@ -189,7 +200,7 @@ def mark_resolved_jira_tickets_as_complete_in_omnifocus (omnifocus_document)
               # if resolved, mark it as complete in OmniFocus
               if task.completed.get != true
                 task.completed.set(true)
-                puts "Marked task completed " + jira_id
+                log "Marked task completed " + jira_id
               end
             end
             # Check to see if the Jira ticket has been unassigned or assigned to someone else, if so delete it.
